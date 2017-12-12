@@ -7,6 +7,8 @@ oc start-build xa-load-eap64
 
 oc expose service xa-load-eap64
 
+# in the following script, replace the URL with your real route hostname...
+
 # wait for the pods to be ready
 
 curl http://xa-load-eap64-maschmid.apps.devel.xpaas/rest/xaservice/ping
