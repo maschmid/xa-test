@@ -1,6 +1,38 @@
 apiVersion: v1
 items:
 - apiVersion: v1
+  kind: ImageStream
+  metadata:
+    name: xa-load-eap64
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    name: xa-load-eap64
+  spec:
+    nodeSelector: {}
+    output:
+      to:
+        kind: ImageStreamTag
+        name: xa-load-eap64:latest
+    postCommit: {}
+    resources: {}
+    runPolicy: Serial
+    source:
+      git:
+        uri: https://github.com/maschmid/xa-test.git
+      type: Git
+    strategy:
+      sourceStrategy:
+        - name: CUSTOM_INSTALL_DIRECTORIES
+          value: extensions/*
+        forcePull: true
+        from:
+          kind: DockerImage
+          name: docker-registry.engineering.redhat.com/knrc/eap64-openshift:CLOUD-2210
+        incremental: false
+      type: Source
+    successfulBuildsHistoryLimit: 5
+- apiVersion: v1
   kind: Service
   metadata:
     name: testdba-postgresql
@@ -33,29 +65,14 @@ items:
 - apiVersion: v1
   kind: Service
   metadata:
-    name: xa-load-migration-service
+    name: xa-load-eap64
   spec:
     ports:
     - port: 80
       protocol: TCP
       targetPort: 8080
     selector:
-      name: xa-load-migration
-    sessionAffinity: None
-    type: ClusterIP
-  status:
-    loadBalancer: {}
-- apiVersion: v1
-  kind: Service
-  metadata:
-    name: xa-load-service
-  spec:
-    ports:
-    - port: 80
-      protocol: TCP
-      targetPort: 8080
-    selector:
-      name: xa-load
+      name: xa-load-eap64
     sessionAffinity: None
     type: ClusterIP
   status:
@@ -236,12 +253,12 @@ items:
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
-    name: xa-load
+    name: xa-load-eap64
   spec:
     replicas: 2
     revisionHistoryLimit: 10
     selector:
-      name: xa-load
+      name: xa-load-eap64
     strategy:
       activeDeadlineSeconds: 21600
       recreateParams:
@@ -252,8 +269,8 @@ items:
       metadata:
         creationTimestamp: null
         labels:
-          name: xa-load
-        name: xa-load
+          name: xa-load-eap64
+        name: xa-load-eap64
       spec:
         containers:
         - env:
@@ -277,7 +294,7 @@ items:
             value: testpwd
           - name: TESTDBA_DATABASE
             value: testdba
-          image: xa-test
+          image: xa-load-eap64
           imagePullPolicy: Always
           livenessProbe:
             exec:
@@ -323,7 +340,7 @@ items:
     - imageChangeParams:
         automatic: true
         containerNames:
-        - xa-load
+        - xa-load-eap64
         from:
           kind: ImageStreamTag
           name: xa-load-eap64:latest
@@ -332,12 +349,12 @@ items:
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
-    name: xa-load-migration
+    name: xa-load-eap64-migration
   spec:
     replicas: 1
     revisionHistoryLimit: 10
     selector:
-      name: xa-load-migration
+      name: xa-load-eap64-migration
     strategy:
       activeDeadlineSeconds: 21600
       recreateParams:
@@ -348,8 +365,8 @@ items:
       metadata:
         creationTimestamp: null
         labels:
-          name: xa-load-migration
-        name: xa-load-migration
+          name: xa-load-eap64-migration
+        name: xa-load-eap64-migration
       spec:
         containers:
         - command:
@@ -373,7 +390,7 @@ items:
             value: testdba
           image: xa-load-eap64
           imagePullPolicy: Always
-          name: xa-load-migration
+          name: xa-load-eap64-migration
           ports:
           - containerPort: 8080
             protocol: TCP
@@ -397,7 +414,7 @@ items:
     - imageChangeParams:
         automatic: true
         containerNames:
-        - xa-load-migration
+        - xa-load-eap64-migration
         from:
           kind: ImageStreamTag
           name: xa-load-eap64:latest
