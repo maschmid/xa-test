@@ -13,7 +13,7 @@ parameters:
 - description: Image
   displayName: Image
   name: IMAGE
-  name: registry.access.redhat.com/jboss-eap-6/eap64-openshift:1.6
+  value: registry.access.redhat.com/jboss-eap-6/eap64-openshift:1.6
 objects:
 - apiVersion: v1
   kind: ImageStream
