@@ -1,19 +1,34 @@
+kind: Template
+metadata:
+  name: xa-load
+resourceVersion: ""
+selfLink: ""
 apiVersion: v1
-items:
+parameters:
+- description: The name for the application.
+  displayName: Application Name
+  name: APPLICATION_NAME
+  required: true
+  value: xa-load
+- description: Image
+  displayName: Image
+  name: IMAGE
+  name: registry.access.redhat.com/jboss-eap-6/eap64-openshift:1.6
+objects:
 - apiVersion: v1
   kind: ImageStream
   metadata:
-    name: xa-load-eap64
+    name: ${APPLICATION_NAME}
 - apiVersion: v1
   kind: BuildConfig
   metadata:
-    name: xa-load-eap64
+    name: ${APPLICATION_NAME}
   spec:
     nodeSelector: {}
     output:
       to:
         kind: ImageStreamTag
-        name: xa-load-eap64:latest
+        name: ${APPLICATION_NAME}:latest
     postCommit: {}
     resources: {}
     runPolicy: Serial
@@ -29,7 +44,7 @@ items:
         forcePull: true
         from:
           kind: DockerImage
-          name: docker-registry.engineering.redhat.com/knrc/eap64-openshift:CLOUD-2210
+          name: ${IMAGE}
         incremental: false
       type: Source
     successfulBuildsHistoryLimit: 5
@@ -66,14 +81,14 @@ items:
 - apiVersion: v1
   kind: Service
   metadata:
-    name: xa-load-eap64
+    name: ${APPLICATION_NAME}
   spec:
     ports:
     - port: 80
       protocol: TCP
       targetPort: 8080
     selector:
-      name: xa-load-eap64
+      name: ${APPLICATION_NAME}
     sessionAffinity: None
     type: ClusterIP
   status:
@@ -254,12 +269,12 @@ items:
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
-    name: xa-load-eap64
+    name: ${APPLICATION_NAME}
   spec:
     replicas: 3
     revisionHistoryLimit: 10
     selector:
-      name: xa-load-eap64
+      name: ${APPLICATION_NAME}
     strategy:
       activeDeadlineSeconds: 21600
       recreateParams:
@@ -270,8 +285,8 @@ items:
       metadata:
         creationTimestamp: null
         labels:
-          name: xa-load-eap64
-        name: xa-load-eap64
+          name: ${APPLICATION_NAME}
+        name: ${APPLICATION_NAME}
       spec:
         containers:
         - env:
@@ -295,7 +310,7 @@ items:
             value: testpwd
           - name: TESTDBA_DATABASE
             value: testdba
-          image: xa-load-eap64
+          image: ${APPLICATION_NAME}
           imagePullPolicy: Always
           livenessProbe:
             exec:
@@ -307,7 +322,7 @@ items:
             periodSeconds: 10
             successThreshold: 1
             timeoutSeconds: 1
-          name: xa-load-eap64
+          name: ${APPLICATION_NAME}
           ports:
           - containerPort: 8080
             protocol: TCP
@@ -341,21 +356,21 @@ items:
     - imageChangeParams:
         automatic: true
         containerNames:
-        - xa-load-eap64
+        - ${APPLICATION_NAME}
         from:
           kind: ImageStreamTag
-          name: xa-load-eap64:latest
+          name: ${APPLICATION_NAME}:latest
       type: ImageChange
     - type: ConfigChange
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
-    name: xa-load-eap64-migration
+    name: ${APPLICATION_NAME}-migration
   spec:
     replicas: 1
     revisionHistoryLimit: 10
     selector:
-      name: xa-load-eap64-migration
+      name: ${APPLICATION_NAME}-migration
     strategy:
       activeDeadlineSeconds: 21600
       recreateParams:
@@ -366,8 +381,8 @@ items:
       metadata:
         creationTimestamp: null
         labels:
-          name: xa-load-eap64-migration
-        name: xa-load-eap64-migration
+          name: ${APPLICATION_NAME}-migration
+        name: ${APPLICATION_NAME}-migration
       spec:
         containers:
         - command:
@@ -389,9 +404,9 @@ items:
             value: testpwd
           - name: TESTDBA_DATABASE
             value: testdba
-          image: xa-load-eap64
+          image: ${APPLICATION_NAME}
           imagePullPolicy: Always
-          name: xa-load-eap64-migration
+          name: ${APPLICATION_NAME}-migration
           ports:
           - containerPort: 8080
             protocol: TCP
@@ -415,10 +430,10 @@ items:
     - imageChangeParams:
         automatic: true
         containerNames:
-        - xa-load-eap64-migration
+        - ${APPLICATION_NAME}-migration
         from:
           kind: ImageStreamTag
-          name: xa-load-eap64:latest
+          name: ${APPLICATION_NAME}:latest
       type: ImageChange
     - type: ConfigChange
 - apiVersion: v1
@@ -431,7 +446,4 @@ items:
     resources:
       requests:
         storage: 1Gi
-kind: List
-metadata: {}
-resourceVersion: ""
-selfLink: ""
+
