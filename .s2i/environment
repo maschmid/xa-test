@@ -1,0 +1,2 @@
+CUSTOM_INSTALL_DIRECTORIES=extensions/*
+MAVEN_ARGS=-Popenshift -DskipTests -Dcom.redhat.xpaas.repo.redhatga clean package

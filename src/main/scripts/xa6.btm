@@ -1,0 +1,9 @@
+RULE Generate an XA Recovery Record
+CLASS com.arjuna.ats.internal.jta.resources.arjunacore.XAResourceRecord
+METHOD topLevelCommit
+AT ENTRY
+BIND xares = $0;
+jndiName:String = xares.getJndiName();
+IF TRUE
+DO traceln("***** topLevelCommit: Halting for 3 seconds for " + jndiName), delay(3000)
+ENDRULE
