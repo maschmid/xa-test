@@ -2,8 +2,6 @@
 oc create -f openshift.yaml
 oc process xa-load IMAGE=<eap64-image> | oc create -f -
 
-mvn clean package
-
 oc start-build xa-load
 
 oc expose service xa-load
