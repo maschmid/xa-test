@@ -23,6 +23,7 @@ items:
       type: Git
     strategy:
       sourceStrategy:
+        env:
         - name: CUSTOM_INSTALL_DIRECTORIES
           value: extensions/*
         forcePull: true
