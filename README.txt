@@ -1,30 +1,31 @@
 
 oc create -f openshift.yaml
+oc process xa-load IMAGE=<eap64-image> | oc create -f -
 
 mvn clean package
 
-oc start-build xa-load-eap64
+oc start-build xa-load
 
-oc expose service xa-load-eap64
+oc expose service xa-load
 
 # in the following script, replace the URL with your real route hostname...
 
 # wait for the pods to be ready
 
-curl http://xa-load-eap64-maschmid.apps.devel.xpaas/rest/xaservice/ping
+curl http://xa-load-maschmid.apps.devel.xpaas/rest/xaservice/ping
 
 # create 32 accounts
-curl http://xa-load-eap64-maschmid.apps.devel.xpaas/rest/xaservice/insert/32
+curl http://xa-load-maschmid.apps.devel.xpaas/rest/xaservice/insert/32
 
 
 touch runtest
 for i in `seq 0 31`
 do
-	(while [ -f runtest ]; do curl http://xa-load-eap64-maschmid.apps.devel.xpaas/rest/xaservice/update/account$i/1; done) > /dev/null 2>&1 &
+	(while [ -f runtest ]; do curl http://xa-load-maschmid.apps.devel.xpaas/rest/xaservice/update/account$i/1; done) > /dev/null 2>&1 &
 done
 
 # scale down
-oc scale dc xa-load-eap64 --replicas=2
+oc scale dc xa-load --replicas=2
 
 # wait for the recovery to start
 
