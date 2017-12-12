@@ -256,7 +256,7 @@ items:
   metadata:
     name: xa-load-eap64
   spec:
-    replicas: 2
+    replicas: 3
     revisionHistoryLimit: 10
     selector:
       name: xa-load-eap64
