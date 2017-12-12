@@ -1,0 +1,419 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: testdba-postgresql
+  spec:
+    ports:
+    - port: 5432
+      protocol: TCP
+      targetPort: 5432
+    selector:
+      name: testdba
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: testdbb-postgresql
+  spec:
+    ports:
+    - port: 5432
+      protocol: TCP
+      targetPort: 5432
+    selector:
+      name: testdbb
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: xa-load-migration-service
+  spec:
+    ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      name: xa-load-migration
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: xa-load-service
+  spec:
+    ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      name: xa-load
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    name: testdba
+  spec:
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      name: testdba
+    strategy:
+      activeDeadlineSeconds: 21600
+      recreateParams:
+        timeoutSeconds: 600
+      resources: {}
+      type: Recreate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          name: testdba
+        name: testdba
+      spec:
+        containers:
+        - env:
+          - name: POSTGRESQL_USERNAME
+            value: testuser
+          - name: POSTGRESQL_SHARED_BUFFERS
+            value: 16MB
+          - name: POSTGRESQL_PASSWORD
+            value: testpwd
+          - name: POSTGRESQL_MAX_PREPARED_TRANSACTIONS
+            value: "90"
+          - name: POSTGRESQL_MAX_CONNECTIONS
+            value: "100"
+          - name: POSTGRESQL_DATABASE
+            value: testdba
+          - name: POSTGRESQL_USER
+            value: testuser
+          image: registry.access.redhat.com/rhscl/postgresql-95-rhel7:latest
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 300
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 5432
+            timeoutSeconds: 1
+          name: testdba
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          - containerPort: 5432
+            protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+              - /bin/sh
+              - -i
+              - -c
+              - psql -h 127.0.0.1 -U $POSTGRESQL_USER -q -d $POSTGRESQL_DATABASE -c
+                'SELECT 1'
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - testdba
+        from:
+          kind: ImageStreamTag
+          name: postgresql:9.5
+          namespace: openshift
+      type: ImageChange
+    - type: ConfigChange
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    name: testdbb
+  spec:
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      name: testdbb
+    strategy:
+      activeDeadlineSeconds: 21600
+      recreateParams:
+        timeoutSeconds: 600
+      resources: {}
+      type: Recreate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          name: testdbb
+        name: testdbb
+      spec:
+        containers:
+        - env:
+          - name: POSTGRESQL_USERNAME
+            value: testuser
+          - name: POSTGRESQL_SHARED_BUFFERS
+            value: 16MB
+          - name: POSTGRESQL_PASSWORD
+            value: testpwd
+          - name: POSTGRESQL_MAX_PREPARED_TRANSACTIONS
+            value: "90"
+          - name: POSTGRESQL_MAX_CONNECTIONS
+            value: "100"
+          - name: POSTGRESQL_DATABASE
+            value: testdbb
+          - name: POSTGRESQL_USER
+            value: testuser
+          image: registry.access.redhat.com/rhscl/postgresql-95-rhel7:latest
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 300
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 5432
+            timeoutSeconds: 1
+          name: testdbb
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          - containerPort: 5432
+            protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+              - /bin/sh
+              - -i
+              - -c
+              - psql -h 127.0.0.1 -U $POSTGRESQL_USER -q -d $POSTGRESQL_DATABASE -c
+                'SELECT 1'
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - testdbb
+        from:
+          kind: ImageStreamTag
+          name: postgresql:9.5
+          namespace: openshift
+      type: ImageChange
+    - type: ConfigChange
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    name: xa-load
+  spec:
+    replicas: 2
+    revisionHistoryLimit: 10
+    selector:
+      name: xa-load
+    strategy:
+      activeDeadlineSeconds: 21600
+      recreateParams:
+        timeoutSeconds: 600
+      resources: {}
+      type: Recreate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          name: xa-load
+        name: xa-load
+      spec:
+        containers:
+        - env:
+          - name: TESTDBA_USERNAME
+            value: testuser
+          - name: TESTDBB_USERNAME
+            value: testuser
+          - name: DB_SERVICE_PREFIX_MAPPING
+            value: testdba-postgresql=TESTDBA,testdbb-postgresql=TESTDBB
+          - name: TESTDBB_PASSWORD
+            value: testpwd
+          - name: TESTDBB_DATABASE
+            value: testdbb
+          - name: SPLIT_DATA
+            value: "true"
+          - name: JBOSS_MODULES_SYSTEM_PKGS_APPEND
+            value: org.jboss.byteman
+          - name: JAVA_OPTS_APPEND
+            value: -javaagent:${JBOSS_HOME}/byteman.jar=script:/tmp/src/src/main/scripts/xa6.btm
+          - name: TESTDBA_PASSWORD
+            value: testpwd
+          - name: TESTDBA_DATABASE
+            value: testdba
+          image: xa-test
+          imagePullPolicy: Always
+          livenessProbe:
+            exec:
+              command:
+              - /bin/bash
+              - -c
+              - /opt/eap/bin/livenessProbe.sh
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: xa-load-eap64
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+              - /bin/bash
+              - -c
+              - /opt/eap/bin/readinessProbe.sh
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /opt/eap/standalone/partitioned_data
+            name: xa
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: xa
+          persistentVolumeClaim:
+            claimName: xa
+    test: false
+    triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - xa-load
+        from:
+          kind: ImageStreamTag
+          name: xa-load-eap64:latest
+      type: ImageChange
+    - type: ConfigChange
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    name: xa-load-migration
+  spec:
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      name: xa-load-migration
+    strategy:
+      activeDeadlineSeconds: 21600
+      recreateParams:
+        timeoutSeconds: 600
+      resources: {}
+      type: Recreate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          name: xa-load-migration
+        name: xa-load-migration
+      spec:
+        containers:
+        - command:
+          - /opt/eap/bin/openshift-migrate.sh
+          env:
+          - name: TESTDBA_USERNAME
+            value: testuser
+          - name: TESTDBB_USERNAME
+            value: testuser
+          - name: DB_SERVICE_PREFIX_MAPPING
+            value: testdba-postgresql=TESTDBA,testdbb-postgresql=TESTDBB
+          - name: TESTDBB_PASSWORD
+            value: testpwd
+          - name: TESTDBB_DATABASE
+            value: testdbb
+          - name: SPLIT_DATA
+            value: "true"
+          - name: TESTDBA_PASSWORD
+            value: testpwd
+          - name: TESTDBA_DATABASE
+            value: testdba
+          image: xa-load-eap64
+          imagePullPolicy: Always
+          name: xa-load-migration
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /opt/eap/standalone/partitioned_data
+            name: xa
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: xa
+          persistentVolumeClaim:
+            claimName: xa
+    test: false
+    triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - xa-load-migration
+        from:
+          kind: ImageStreamTag
+          name: xa-load-eap64:latest
+      type: ImageChange
+    - type: ConfigChange
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: xa
+  spec:
+    accessModes:
+    - ReadWriteMany
+    resources:
+      requests:
+        storage: 1Gi
+kind: List
+metadata: {}
+resourceVersion: ""
+selfLink: ""
